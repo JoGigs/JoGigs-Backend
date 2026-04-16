@@ -24,6 +24,9 @@ export class User {
     @Column()
     phone: string;
 
+    @Column({ nullable: true })
+    location: string;
+
     @Column()
     type: UserType;
 

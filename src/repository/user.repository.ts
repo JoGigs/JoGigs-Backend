@@ -13,6 +13,10 @@ export class UserRepository extends Repository<User> {
         return this.findOneBy({ email });
     }
 
+    async findById(id: number): Promise<User | null> {
+        return this.findOneBy({ id });
+    }
+
     async createUser(dto: RegisterUserDto, hashedPassword: string): Promise<User> {
         const newUser = this.create({
             fullName: dto.fullName,
@@ -23,4 +27,15 @@ export class UserRepository extends Repository<User> {
         });
         return this.save(newUser);
     }
+
+    async updateProfile(
+        user: User,
+        fields: { fullName?: string; location?: string; password?: string },
+    ): Promise<User> {
+        if (fields.fullName !== undefined) user.fullName = fields.fullName;
+        if (fields.location !== undefined) user.location = fields.location;
+        if (fields.password !== undefined) user.password = fields.password;
+        return this.save(user);
+    }
 }
+

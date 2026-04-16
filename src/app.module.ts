@@ -15,6 +15,16 @@ import { ServiceListing } from './model/service-listing/service-listing.entity';
 import { ServiceListingController } from './controller/service-listing/service-listing.controller';
 import { ServiceListingRepository } from './repository/service-listing.repository';
 import { ServiceListingService } from './service/service-listing/service-listing.service';
+import { ProfileController } from './controller/profile/profile.controller';
+import { ProfileService } from './service/profile/profile.service';
+import { Message } from './model/chat/message.entity';
+import { MessageRepository } from './repository/message.repository';
+import { ChatService } from './service/chat/chat.service';
+import { ChatGateway } from './gateway/chat/chat.gateway';
+import { Booking } from './model/booking/booking.entity';
+import { BookingRepository } from './repository/booking.repository';
+import { BookingService } from './service/booking/booking.service';
+import { BookingController } from './controller/booking/booking.controller';
 
 @Module({
   imports: [
@@ -28,22 +38,28 @@ import { ServiceListingService } from './service/service-listing/service-listing
       database: 'JoGigs',
       autoLoadEntities: true,
       synchronize: true,
-      dropSchema: true,
+      dropSchema: false,
     }),
-    TypeOrmModule.forFeature([User, RefreshToken, ServiceListing]),
+    TypeOrmModule.forFeature([User, RefreshToken, ServiceListing, Message, Booking]),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'SECRET',
       signOptions: { expiresIn: '15m' },
     }),
   ],
-  controllers: [AppController, AuthController, ServiceListingController],
+  controllers: [AppController, AuthController, ServiceListingController, ProfileController, BookingController],
   providers: [
     AppService,
     AuthService,
     UserRepository,
     ServiceListingRepository,
     ServiceListingService,
+    ProfileService,
+    MessageRepository,
+    ChatService,
+    ChatGateway,
+    BookingRepository,
+    BookingService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
