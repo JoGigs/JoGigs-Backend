@@ -6,12 +6,20 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserRepository } from '../../repository/user.repository';
+import { BookingRepository } from '../../repository/booking.repository';
 import { UpdateProfileDto } from '../../model/user/dto/update-profile.dto';
 import { User } from '../../model/user/user.entity';
-
+ 
 @Injectable()
 export class ProfileService {
-    constructor(private readonly userRepository: UserRepository) {}
+    constructor(
+        private readonly userRepository: UserRepository,
+        private readonly bookingRepository: BookingRepository,
+    ) {}
+ 
+    async getProfessionalRating(userId: number): Promise<number> {
+        return this.bookingRepository.getAverageProfessionalRating(userId);
+    }
 
     async getProfile(userId: number): Promise<Omit<User, 'password'>> {
         const user = await this.userRepository.findById(userId);
@@ -26,12 +34,16 @@ export class ProfileService {
         const user = await this.userRepository.findById(userId);
         if (!user) throw new NotFoundException('User not found');
 
-        const updates: { fullName?: string; location?: string; password?: string } = {};
-
+        const updates: { fullName?: string; location?: string; phone?: string; password?: string } = {};
+ 
         if (dto.fullName !== undefined) {
             updates.fullName = dto.fullName;
         }
-
+ 
+        if (dto.phone !== undefined) {
+            updates.phone = dto.phone;
+        }
+ 
         if (dto.location !== undefined) {
             updates.location = dto.location;
         }

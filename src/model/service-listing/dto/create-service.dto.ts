@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsNumber, Min } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 
 export class CreateServiceListingDto {
     @IsNotEmpty()
@@ -13,4 +13,12 @@ export class CreateServiceListingDto {
     @IsNumber()
     @Min(0)
     price: number;
+
+    @IsNotEmpty()
+    @IsString()
+    category: string;
+
+    @IsOptional()
+    @IsString()
+    location?: string;
 }

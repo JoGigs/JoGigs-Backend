@@ -1,6 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ServiceListingRepository } from '../../repository/service-listing.repository';
 import { CreateServiceListingDto } from '../../model/service-listing/dto/create-service.dto';
+import { UpdateServiceListingDto } from '../../model/service-listing/dto/update-service.dto';
 import { User } from '../../model/user/user.entity';
 import { UserType } from '../../model/user/user.type.enum';
 import { UserRepository } from '../../repository/user.repository';
@@ -28,6 +29,21 @@ export class ServiceListingService {
 
     async findMyServices(userId: number) {
         return this.serviceRepository.findByProfessional(userId);
+    }
+
+    async update(serviceId: number, userId: number, dto: UpdateServiceListingDto) {
+        const service = await this.serviceRepository.findOne({
+            where: { id: serviceId },
+            relations: ['professional']
+        });
+
+        if (!service) throw new NotFoundException('Service not found');
+
+        if (service.professional.id !== userId) {
+            throw new ForbiddenException('You can only edit your own services');
+        }
+
+        return this.serviceRepository.updateService(service, dto);
     }
 
     async delete(serviceId: number, userId: number) {

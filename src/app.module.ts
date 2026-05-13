@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './model/user/user.entity';
 import { RefreshToken } from './model/auth/refresh-token.entity';
@@ -18,46 +19,45 @@ import { ServiceListingService } from './service/service-listing/service-listing
 import { ProfileController } from './controller/profile/profile.controller';
 import { ProfileService } from './service/profile/profile.service';
 import { Message } from './model/chat/message.entity';
-import { MessageRepository } from './repository/message.repository';
-import { ChatService } from './service/chat/chat.service';
-import { ChatGateway } from './gateway/chat/chat.gateway';
+import { WsModule } from './gateway/ws.module';
 import { Booking } from './model/booking/booking.entity';
 import { BookingRepository } from './repository/booking.repository';
 import { BookingService } from './service/booking/booking.service';
 import { BookingController } from './controller/booking/booking.controller';
-
+import { NotificationModule } from './module/notification.module';
+import { Notification } from './model/notification/notification.entity';
+ 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5000,
-      username: 'postgres',
-      password: '123',
-      database: 'JoGigs',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5000'),
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '123',
+      database: process.env.DB_NAME || 'JoGigs',
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: process.env.NODE_ENV !== 'production',
       dropSchema: false,
     }),
-    TypeOrmModule.forFeature([User, RefreshToken, ServiceListing, Message, Booking]),
+    TypeOrmModule.forFeature([User, RefreshToken, ServiceListing, Message, Booking, Notification]),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'SECRET',
       signOptions: { expiresIn: '15m' },
     }),
+    WsModule,
+    NotificationModule,
   ],
   controllers: [AppController, AuthController, ServiceListingController, ProfileController, BookingController],
   providers: [
     AppService,
     AuthService,
-    UserRepository,
     ServiceListingRepository,
     ServiceListingService,
     ProfileService,
-    MessageRepository,
-    ChatService,
-    ChatGateway,
     BookingRepository,
     BookingService,
     {

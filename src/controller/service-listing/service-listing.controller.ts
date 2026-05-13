@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Get, Delete, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, Delete, Param, Req, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ServiceListingService } from '../../service/service-listing/service-listing.service';
 import { CreateServiceListingDto } from '../../model/service-listing/dto/create-service.dto';
+import { UpdateServiceListingDto } from '../../model/service-listing/dto/update-service.dto';
 import { Roles } from '../../common/decorator/roles.decorator';
 import { UserType } from '../../model/user/user.type.enum';
 import { RolesGuard } from '../../common/guard/roles.guard';
@@ -28,6 +29,16 @@ export class ServiceListingController {
     @Roles(UserType.PROFESSIONAL)
     findMyServices(@Req() req: any) {
         return this.serviceListingService.findMyServices(req.user['sub']);
+    }
+
+    @Patch(':id')
+    @Roles(UserType.PROFESSIONAL)
+    update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateServiceListingDto,
+        @Req() req: any
+    ) {
+        return this.serviceListingService.update(id, req.user['sub'], dto);
     }
 
     @Delete(':id')

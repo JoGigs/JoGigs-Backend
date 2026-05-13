@@ -15,10 +15,16 @@ export class ServiceListing {
     @Column('decimal', { precision: 10, scale: 2 })
     price: number;
 
+    @Column()
+    category: string;
+
     @Column('float', { default: 0 })
     rating: number;
 
-    @ManyToOne(() => User, (user) => user.services, { onDelete: 'CASCADE' })
+    @Column({ nullable: true })
+    location: string;
+
+    @ManyToOne(() => User, (user) => user.services, { eager: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'professionalId' })
     professional: User;
 

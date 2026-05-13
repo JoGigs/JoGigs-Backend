@@ -25,7 +25,6 @@ export class BookingRepository extends Repository<Booking> {
     async findByCustomer(customerId: number): Promise<Booking[]> {
         return this.find({
             where: { customerId },
-            relations: ['serviceListing'],
             order: { createdAt: 'DESC' },
         });
     }
@@ -37,6 +36,13 @@ export class BookingRepository extends Repository<Booking> {
             relations: ['serviceListing', 'customer'],
             order: { createdAt: 'DESC' },
         });
+    }
+
+    async getAverageProfessionalRating(professionalId: number): Promise<number> {
+        const avg = await this.average('customerRating' as any, {
+            serviceListing: { professionalId }
+        });
+        return avg ? parseFloat(avg.toString()) : 0;
     }
 
     async updateStatus(booking: Booking, status: BookingStatus): Promise<Booking> {

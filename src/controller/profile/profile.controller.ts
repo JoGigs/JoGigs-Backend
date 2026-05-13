@@ -1,11 +1,18 @@
-import { Controller, Get, Patch, Body, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Req, Param, ParseIntPipe } from '@nestjs/common';
 import type { Request } from 'express';
 import { ProfileService } from '../../service/profile/profile.service';
 import { UpdateProfileDto } from '../../model/user/dto/update-profile.dto';
-
+import { Public } from '../../common/decorator/public.decorator';
+ 
 @Controller('profile')
 export class ProfileController {
     constructor(private readonly profileService: ProfileService) {}
+ 
+    @Get(':id/rating')
+    @Public()
+    getProfessionalRating(@Param('id', ParseIntPipe) id: number) {
+        return this.profileService.getProfessionalRating(id);
+    }
 
     /**
      * GET /profile

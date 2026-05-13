@@ -25,13 +25,15 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) { }
 
-  async signUp(dto: RegisterUserDto): Promise<User> {
+  async signUp(dto: RegisterUserDto): Promise<Omit<User, 'password'>> {
     const exists = await this.userRepository.findByEmail(dto.email);
     if (exists) {
       throw new BadRequestException('User already exists');
     }
     const hashedPassword = await this.hashData(dto.password);
-    return this.userRepository.createUser(dto, hashedPassword);
+    const user = await this.userRepository.createUser(dto, hashedPassword);
+    const { password, ...safeUser } = user;
+    return safeUser as Omit<User, 'password'>;
   }
 
   async signIn(dto: LoginUserDto, response: Response) {
@@ -49,7 +51,8 @@ export class AuthService {
     await this.storeRefreshToken(user.id, tokens.refreshToken, tokens.jti);
 
     this.setCookies(response, tokens);
-    return { message: 'Success', user };
+    const { password, ...safeUser } = user;
+    return { message: 'Success', user: safeUser };
   }
 
   private async manageSessionLimit(userId: number) {
@@ -72,17 +75,22 @@ export class AuthService {
   }
 
   async logout(response: Response, refreshToken?: string) {
-    if (refreshToken) {
-      const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET',
-      });
-
-      if (payload.jti) {
-        await this.refreshTokenRepository.delete({ tokenId: payload.jti });
-      }
-    }
+    // Always clear cookies first so logout succeeds even with an invalid token
     response.clearCookie('access_token');
     response.clearCookie('refresh_token');
+
+    if (refreshToken) {
+      try {
+        const payload = await this.jwtService.verifyAsync(refreshToken, {
+          secret: process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET',
+        });
+        if (payload.jti) {
+          await this.refreshTokenRepository.delete({ tokenId: payload.jti });
+        }
+      } catch {
+        // Token already expired or tampered — cookies are cleared, nothing else to do
+      }
+    }
     return { message: 'Logged out' };
   }
 
@@ -104,6 +112,12 @@ export class AuthService {
       });
       if (!storedToken)
         throw new ForbiddenException('Access Denied: Token not found');
+
+      // Reject tokens that have passed their DB-level expiry
+      if (storedToken.expiresAt < new Date()) {
+        await this.refreshTokenRepository.delete({ id: storedToken.id });
+        throw new ForbiddenException('Access Denied: Token expired');
+      }
 
       const isMatch = await bcrypt.compare(
         refreshToken,
@@ -171,17 +185,20 @@ export class AuthService {
     response: Response,
     tokens: { accessToken: string; refreshToken: string },
   ) {
-    response.cookie('access_token', tokens.accessToken, {
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true, 
+      sameSite: 'none' as const, 
+      path: '/',
+    };
+
+    response.cookie('access_token', tokens.accessToken, {
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
+
     response.cookie('refresh_token', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }

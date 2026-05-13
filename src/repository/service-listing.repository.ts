@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ServiceListing } from '../model/service-listing/service-listing.entity';
 import { CreateServiceListingDto } from '../model/service-listing/dto/create-service.dto';
+import { UpdateServiceListingDto } from '../model/service-listing/dto/update-service.dto';
 import { User } from '../model/user/user.entity';
 
 @Injectable()
@@ -30,5 +31,10 @@ export class ServiceListingRepository extends Repository<ServiceListing> {
             relations: ['professional'],
             order: { id: 'DESC' }, // Show newest first
         });
+    }
+
+    async updateService(service: ServiceListing, dto: UpdateServiceListingDto): Promise<ServiceListing> {
+        Object.assign(service, dto);
+        return this.save(service);
     }
 }

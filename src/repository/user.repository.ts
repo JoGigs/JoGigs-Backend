@@ -30,10 +30,11 @@ export class UserRepository extends Repository<User> {
 
     async updateProfile(
         user: User,
-        fields: { fullName?: string; location?: string; password?: string },
+        fields: { fullName?: string; location?: string; phone?: string; password?: string },
     ): Promise<User> {
         if (fields.fullName !== undefined) user.fullName = fields.fullName;
         if (fields.location !== undefined) user.location = fields.location;
+        if (fields.phone !== undefined) user.phone = fields.phone;
         if (fields.password !== undefined) user.password = fields.password;
         return this.save(user);
     }

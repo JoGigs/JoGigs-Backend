@@ -18,8 +18,16 @@ interface AuthSocket extends Socket {
 
 @WebSocketGateway({
     cors: {
-        origin: /^http:\/\/localhost(:\d+)?$/, // TODO: tighten this in production if ever deployed
+        origin: true,
         credentials: true,
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'Accept',
+            'ngrok-skip-browser-warning',
+        ],
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS']
     },
     namespace: '/chat',
 })
@@ -27,8 +35,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server: Server;
 
-    // Map of userId -> socketId for routing messages
-    private connectedUsers = new Map<number, string>();
+    // Map of userId -> Set<socketId> so multi-tab users all receive messages
+    private connectedUsers = new Map<number, Set<string>>();
 
     constructor(
         private readonly chatService: ChatService,
@@ -54,7 +62,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
 
             client.userId = payload.sub;
-            this.connectedUsers.set(payload.sub, client.id);
+            const existing = this.connectedUsers.get(payload.sub) ?? new Set<string>();
+            existing.add(client.id);
+            this.connectedUsers.set(payload.sub, existing);
 
             console.log(`[Chat] User ${payload.sub} connected → socket ${client.id}`);
         } catch {
@@ -65,8 +75,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleDisconnect(client: AuthSocket) {
         if (client.userId) {
-            this.connectedUsers.delete(client.userId);
-            console.log(`[Chat] User ${client.userId} disconnected`);
+            const sockets = this.connectedUsers.get(client.userId);
+            if (sockets) {
+                sockets.delete(client.id);
+                if (sockets.size === 0) this.connectedUsers.delete(client.userId);
+            }
+            console.log(`[Chat] User ${client.userId} disconnected (socket ${client.id})`);
         }
     }
 
@@ -93,10 +107,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Echo back to sender with the saved message (has id + createdAt)
         client.emit('messageSent', message);
 
-        // Deliver to receiver if they are online
-        const receiverSocketId = this.connectedUsers.get(data.receiverId);
-        if (receiverSocketId) {
-            this.server.to(receiverSocketId).emit('newMessage', message);
+        // Deliver to all of receiver's connected sockets (multi-tab support)
+        const receiverSockets = this.connectedUsers.get(data.receiverId);
+        if (receiverSockets) {
+            receiverSockets.forEach((socketId) =>
+                this.server.to(socketId).emit('newMessage', message),
+            );
         }
 
         return message;
@@ -135,5 +151,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const list = await this.chatService.getConversationList(userId);
         client.emit('conversationList', list);
         return list;
+    }
+
+
+
+    notifyMessagesRead(userId: number, byUserId: number) {
+        const sockets = this.connectedUsers.get(byUserId);
+        if (sockets) {
+            sockets.forEach((socketId) =>
+                this.server.to(socketId).emit('messagesRead', { byUserId: userId }),
+            );
+        }
+    }
+
+    @SubscribeMessage('markAsRead')
+    async handleMarkAsRead(
+        @ConnectedSocket() client: AuthSocket,
+        @MessageBody() data: { withUserId: number },
+    ) {
+        const userId = client.userId;
+        if (!userId) {
+            return client.emit('error', { message: 'Unauthorized' });
+        }
+
+        await this.chatService.markAsRead(userId, data.withUserId);
+        
+        // Notify sender that messages were read
+        this.notifyMessagesRead(userId, data.withUserId);
     }
 }

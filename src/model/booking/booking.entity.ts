@@ -23,7 +23,7 @@ export class Booking {
     @Column()
     customerId: number;
 
-    @ManyToOne(() => ServiceListing, { eager: false, onDelete: 'CASCADE' })
+    @ManyToOne(() => ServiceListing, { eager: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'serviceListingId' })
     serviceListing: ServiceListing;
 

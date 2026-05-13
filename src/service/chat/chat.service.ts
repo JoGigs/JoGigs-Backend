@@ -11,10 +11,16 @@ export class ChatService {
     ) { }
 
     async sendMessage(senderId: number, receiverId: number, content: string): Promise<Message> {
+        if (senderId === receiverId) {
+            throw new NotFoundException('Cannot send a message to yourself');
+        }
+
         const receiver = await this.userRepository.findById(receiverId);
         if (!receiver) throw new NotFoundException(`User ${receiverId} not found`);
 
-        return this.messageRepository.saveMessage(senderId, receiverId, content);
+        const message = await this.messageRepository.saveMessage(senderId, receiverId, content);
+
+        return message;
     }
 
     async getConversation(userAId: number, userBId: number): Promise<Message[]> {
@@ -27,7 +33,11 @@ export class ChatService {
         return this.messageRepository.getConversation(userAId, userBId);
     }
 
-    async getConversationList(userId: number): Promise<Message[]> {
+    async getConversationList(userId: number): Promise<any[]> {
         return this.messageRepository.getConversationList(userId);
+    }
+
+    async markAsRead(userId: number, fromUserId: number): Promise<void> {
+        await this.messageRepository.markAsRead(fromUserId, userId);
     }
 }
