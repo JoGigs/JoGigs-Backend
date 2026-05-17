@@ -21,7 +21,6 @@ export class BookingRepository extends Repository<Booking> {
         });
     }
 
-    /** All bookings made by a customer */
     async findByCustomer(customerId: number): Promise<Booking[]> {
         return this.find({
             where: { customerId },
@@ -29,7 +28,6 @@ export class BookingRepository extends Repository<Booking> {
         });
     }
 
-    /** All bookings for services owned by a professional */
     async findByProfessional(professionalId: number): Promise<Booking[]> {
         return this.find({
             where: { serviceListing: { professionalId } },

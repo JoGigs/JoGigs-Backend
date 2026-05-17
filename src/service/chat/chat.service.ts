@@ -27,7 +27,6 @@ export class ChatService {
         const other = await this.userRepository.findById(userBId);
         if (!other) throw new NotFoundException(`User ${userBId} not found`);
 
-        // Mark messages sent by userB to userA as read
         await this.messageRepository.markAsRead(userBId, userAId);
 
         return this.messageRepository.getConversation(userAId, userBId);

@@ -14,21 +14,12 @@ export class ProfileController {
         return this.profileService.getProfessionalRating(id);
     }
 
-    /**
-     * GET /profile
-     * Returns the authenticated user's basic profile info (no password).
-     */
     @Get()
     getProfile(@Req() req: Request) {
         const userId: number = (req as any).user.sub;
         return this.profileService.getProfile(userId);
     }
 
-    /**
-     * PATCH /profile
-     * Allows the authenticated user to update their name, location, and/or password.
-     * Password change requires both `currentPassword` and `newPassword` in the body.
-     */
     @Patch()
     updateProfile(@Req() req: Request, @Body() dto: UpdateProfileDto) {
         const userId: number = (req as any).user.sub;

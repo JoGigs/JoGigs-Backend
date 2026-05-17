@@ -30,9 +30,18 @@ export class BookingService {
             throw new NotFoundException(`Service listing with ID ${dto.serviceListingId} not found`);
         }
 
-        // Optional: Prevent a professional from booking their own service
         if (serviceListing.professionalId === customerId) {
             throw new BadRequestException('You cannot book your own service');
+        }
+
+        const existingBooking = await this.bookingRepository.findOneBy({
+            customerId,
+            serviceListingId: dto.serviceListingId,
+            status: BookingStatus.PENDING,
+        });
+
+        if (existingBooking) {
+            throw new BadRequestException('You already have a booking for this service');
         }
 
         const booking = await this.bookingRepository.createBooking(customerId, dto.serviceListingId);

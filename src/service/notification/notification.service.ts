@@ -14,9 +14,6 @@ export class NotificationService {
         private readonly wsGateway: WsGateway,
     ) { }
 
-    /**
-     * Create a notification and emit it live
-     */
     async notify(
         userId: number,
         type: NotificationType,
@@ -30,7 +27,6 @@ export class NotificationService {
             relatedId,
         );
 
-        // Emit real-time notification
         this.wsGateway.emitToUser(userId, 'notification', notification);
         
         // Also emit a general refresh event for the frontend
@@ -59,28 +55,24 @@ export class NotificationService {
 
     @OnEvent('booking.created', { async: true })
     async handleBookingCreated(booking: Booking) {
-        // Notify Professional
         await this.notify(
             booking.serviceListing.professionalId,
             NotificationType.BOOKING_REQUESTED,
             `New service request for "${booking.serviceListing.title}"`,
             booking.id
         );
-        // Refresh Customer (other tabs)
         this.refreshOnly(booking.customerId, booking.id);
     }
 
     @OnEvent('booking.responded', { async: true })
     async handleBookingResponded(booking: Booking) {
         const isAccepted = booking.status === BookingStatus.ACCEPTED;
-        // Notify Customer
         await this.notify(
             booking.customerId,
             isAccepted ? NotificationType.BOOKING_ACCEPTED : NotificationType.BOOKING_DECLINED,
             `Your request for "${booking.serviceListing.title}" was ${booking.status}`,
             booking.id
         );
-        // Refresh Professional (other tabs)
         this.refreshOnly(booking.serviceListing.professionalId, booking.id);
     }
 
@@ -88,7 +80,6 @@ export class NotificationService {
     async handleBookingCancelled(payload: { booking: Booking; previousStatus: BookingStatus }) {
         const { booking, previousStatus } = payload;
         
-        // Notify Professional if it was already accepted
         if (previousStatus === BookingStatus.ACCEPTED) {
             await this.notify(
                 booking.serviceListing.professionalId,
@@ -97,24 +88,20 @@ export class NotificationService {
                 booking.id
             );
         } else {
-            // Just refresh professional dashboard to remove pending request
             this.refreshOnly(booking.serviceListing.professionalId, booking.id);
         }
 
-        // Refresh Customer (other tabs)
         this.refreshOnly(booking.customerId, booking.id);
     }
 
     @OnEvent('booking.completed', { async: true })
     async handleBookingCompleted(booking: Booking) {
-        // Notify Customer
         await this.notify(
             booking.customerId,
             NotificationType.BOOKING_ACCEPTED, // Using accepted icon/style as fallback
             `Your service "${booking.serviceListing.title}" has been marked as completed!`,
             booking.id
         );
-        // Refresh Professional (other tabs)
         this.refreshOnly(booking.serviceListing.professionalId, booking.id);
     }
 }

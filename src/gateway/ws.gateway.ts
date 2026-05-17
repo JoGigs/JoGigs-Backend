@@ -60,7 +60,6 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             client.userId = payload.sub;
 
-            // Join a private room for this user
             const roomName = `user:${client.userId}`;
             await client.join(roomName);
 
@@ -78,9 +77,6 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    /**
-     * CHAT: Send a message
-     */
     @SubscribeMessage('sendMessage')
     async handleSendMessage(
         @ConnectedSocket() client: AuthSocket,
@@ -94,18 +90,12 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
             data.content,
         );
 
-        // Echo to sender's room (all their tabs)
         this.server.to(`user:${client.userId}`).emit('messageSent', message);
-
-        // Deliver to receiver's room (all their tabs)
         this.server.to(`user:${data.receiverId}`).emit('newMessage', message);
 
         return message;
     }
 
-    /**
-     * CHAT: Mark as read
-     */
     @SubscribeMessage('markAsRead')
     async handleMarkAsRead(
         @ConnectedSocket() client: AuthSocket,
@@ -115,17 +105,9 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         await this.chatService.markAsRead(client.userId, data.withUserId);
 
-        // Send the updated conversation list back to the user who just read the messages
-        await this.handleGetConversationList(client);
-
-        // Notify the other user that their messages were read
         this.server.to(`user:${data.withUserId}`).emit('messagesRead', { byUserId: client.userId });
     }
 
-    /**
-     * DATA FETCHING (CHAT): Conversation history
-     * Note: Prefer standard HTTP for large data, but keeping for compatibility.
-     */
     @SubscribeMessage('getConversation')
     async handleGetConversation(
         @ConnectedSocket() client: AuthSocket,
@@ -143,9 +125,6 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('conversationList', list);
     }
 
-    /**
-     * UTILITY: Emit notification to specific user
-     */
     emitToUser(userId: number, event: string, data: any) {
         this.server.to(`user:${userId}`).emit(event, data);
     }

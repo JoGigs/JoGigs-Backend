@@ -25,7 +25,6 @@ export class ProfileService {
         const user = await this.userRepository.findById(userId);
         if (!user) throw new NotFoundException('User not found');
 
-        // Strip password before returning
         const { password, ...profile } = user;
         return profile as Omit<User, 'password'>;
     }
