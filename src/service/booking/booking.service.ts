@@ -4,6 +4,7 @@ import {
     ForbiddenException,
     BadRequestException,
 } from '@nestjs/common';
+import { Not, IsNull } from 'typeorm';
 import { BookingRepository } from '../../repository/booking.repository';
 import { ServiceListingRepository } from '../../repository/service-listing.repository';
 import { Booking } from '../../model/booking/booking.entity';
@@ -28,6 +29,10 @@ export class BookingService {
 
         if (!serviceListing) {
             throw new NotFoundException(`Service listing with ID ${dto.serviceListingId} not found`);
+        }
+
+        if (serviceListing.isDisabled) {
+            throw new BadRequestException('This service is currently disabled and cannot be booked');
         }
 
         if (serviceListing.professionalId === customerId) {
@@ -162,6 +167,9 @@ export class BookingService {
         }
 
         booking.customerRating = dto.rating;
+        if (dto.comment) {
+            booking.comment = dto.comment;
+        }
         const saved = await this.bookingRepository.save(booking);
 
         // Recalculate average rating for the service listing
@@ -176,5 +184,16 @@ export class BookingService {
         await this.serviceListingRepository.update(booking.serviceListingId, { rating: newAvg });
 
         return saved;
+    }
+
+    async getServiceComments(serviceId: number): Promise<Booking[]> {
+        return this.bookingRepository.find({
+            where: {
+                serviceListingId: serviceId,
+                customerRating: Not(IsNull()),
+            },
+            relations: ['customer'],
+            order: { createdAt: 'DESC' },
+        });
     }
 }

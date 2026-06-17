@@ -46,6 +46,22 @@ export class ServiceListingService {
         return this.serviceRepository.updateService(service, dto);
     }
 
+    async toggleDisable(serviceId: number, userId: number) {
+        const service = await this.serviceRepository.findOne({
+            where: { id: serviceId },
+            relations: ['professional']
+        });
+
+        if (!service) throw new NotFoundException('Service not found');
+
+        if (service.professional.id !== userId) {
+            throw new ForbiddenException('You can only modify your own services');
+        }
+
+        service.isDisabled = !service.isDisabled;
+        return this.serviceRepository.save(service);
+    }
+
     async delete(serviceId: number, userId: number) {
         const service = await this.serviceRepository.findOne({
             where: { id: serviceId },

@@ -31,6 +31,15 @@ export class ServiceListingController {
         return this.serviceListingService.findMyServices(req.user['sub']);
     }
 
+    @Patch(':id/toggle-disable')
+    @Roles(UserType.PROFESSIONAL)
+    toggleDisable(
+        @Param('id', ParseIntPipe) id: number,
+        @Req() req: any
+    ) {
+        return this.serviceListingService.toggleDisable(id, req.user['sub']);
+    }
+
     @Patch(':id')
     @Roles(UserType.PROFESSIONAL)
     update(

@@ -30,4 +30,7 @@ export class ServiceListing {
 
     @Column()
     professionalId: number;
+
+    @Column({ default: false })
+    isDisabled: boolean;
 }

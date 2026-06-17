@@ -16,6 +16,7 @@ import { RespondBookingDto } from '../../model/booking/dto/respond-booking.dto';
 import { RateBookingDto } from '../../model/booking/dto/rate-booking.dto';
 import { RolesGuard } from '../../common/guard/roles.guard';
 import { Roles } from '../../common/decorator/roles.decorator';
+import { Public } from '../../common/decorator/public.decorator';
 import { UserType } from '../../model/user/user.type.enum';
 
 @Controller('bookings')
@@ -73,6 +74,14 @@ export class BookingController {
     ) {
         const customerId: number = (req as any).user.sub;
         return this.bookingService.cancelBooking(customerId, id);
+    }
+
+    @Get('service/:serviceId/comments')
+    @Public()
+    getServiceComments(
+        @Param('serviceId', ParseIntPipe) serviceId: number,
+    ) {
+        return this.bookingService.getServiceComments(serviceId);
     }
 
     @Post(':id/rate')

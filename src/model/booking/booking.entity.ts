@@ -36,6 +36,9 @@ export class Booking {
     @Column({ type: 'float', nullable: true })
     customerRating: number | null;
 
+    @Column({ type: 'text', nullable: true })
+    comment: string | null;
+
     @CreateDateColumn()
     createdAt: Date;
 
